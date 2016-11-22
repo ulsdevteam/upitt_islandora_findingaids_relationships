@@ -1,0 +1,302 @@
+<?php
+
+/**
+ * @file
+ * Primary hook implementations.
+ */
+
+// Permissions.
+define('UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE', 'manage isMemberOf finding aids');
+
+/**
+ * Implements hook_menu().
+ */
+function upitt_islandora_findingaids_relationships_menu() {
+  $items = array(
+    'islandora/object/%islandora_object/manage/object/findingaidrelationship/%/remove' => array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('upitt_islandora_findingaids_relationships_remove',
+        2, 6, 7),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/findingaidsobjects.form.inc',
+      'access arguments' => array(UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE),
+    ),
+    'islandora/object/%islandora_object/manage/object/findingaidrelationship/add' => array(
+      'title' => 'Add isMemberOfSite to this Collection',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('upitt_islandora_findingaids_relationships_add', 2),
+      'type' => MENU_LOCAL_ACTION,
+      'file' => 'includes/findingaidsobjects.form.inc',
+      'access arguments' => array(UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE),
+    ),
+    // need a method to associate the finding aid object with all the objects in the related EAD
+    'islandora_findingaids_relationships/findingaidsobjects' => array(
+      'title' => 'Islandora Finding Aids Objects',
+      'description' => 'Autocomplete callback to populate Finding Aid relationship dropdown.',
+      'page callback' => '_islandora_findingaids_autocomplete',
+      'access arguments' => array(UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE),
+      'type' => MENU_CALLBACK,
+    ),
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_islandora_overview_object_alter().
+ *
+ * Shows the collection usage stats on the object overview tab if allowed.
+ */
+function upitt_islandora_findingaids_relationships_islandora_overview_object_alter(AbstractObject &$object, &$output) {
+  if (!user_access(UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE)) {
+    return;
+  }
+  if (_is_findingaid($object->id)) {
+    manage_findingaid_objects($object, $output);
+  }
+  else {
+    manage_object_findingaid($object, $output);
+  }
+}
+
+
+/**
+ * to generate the output for the manage page for finding aids
+ */
+function manage_findingaid_objects(AbstractObject &$object, &$output) {
+  $obj_memberships = $object->relationships->get(NULL, 'isMemberOf');
+
+  $EAD_rows = /* $rows = */ array();
+  // get all the objects that are currently related to this finding aid object.
+
+/*  $objects = findingaid_objects($object->id);
+  foreach ($objects as $object) {
+    $object_link = l($object['object']['value'], "islandora/object/{$object['object']['value']}");
+    $remove_link = l(t('Remove'), "islandora/object/{$object->id}/manage/object/findingaidrelationship/" . urlencode($obj_membership['predicate']['namespace']) . "/" . urlencode($obj_membership['object']['value']) . "/remove");
+    $rows[] = array($object_link, $remove_link) . ' wriojweorjweiorjwer';
+  }
+  */
+  $referenced_objects = findingaid_EAD_objects($object);
+  foreach ($referenced_objects as $object_pid) {
+
+    $object_link = l($object_pid, "islandora/object/{$object_pid}");
+    $child_object = islandora_object_load($object_pid);
+    $related = FALSE;
+    $exists = FALSE;
+    if (is_object($child_object)) {
+      $rels = $child_object->relationships->get(NULL, 'isMemberOf');
+      foreach ($rels as $rel) {
+// error_log('object ' . $object_pid . ' related to ' . $rel['object']['value']);
+        $related |= $rel['object']['value'];
+        $obj_rel = $rel;
+      }
+      $exists = TRUE;
+    }
+    $object_link = ($exists) ? l($child_object->label, "islandora/object/{$object_pid}") : $object_pid;
+      
+    // if the object is related, display a remove link -- else display the add link
+    if ($related) {
+      // remove
+      $operation_link = ($exists) ? l(t('Remove'), "islandora/object/{$object->id}/manage/object/findingaidrelationship/" . $object_pid . "/remove") :
+        'object does not exist';
+    }
+    else {
+      // add
+      $operation_link = ($exists) ? l(t('Add'), "islandora/object/{$object->id}/manage/object/findingaidrelationship/" . $object_pid . "/add") :
+        'object does not exist';
+    }
+    $EAD_rows[] = array($object_pid, $object_link, $operation_link);
+  }
+  if (count($EAD_rows) < 1) {
+    $EAD_rows[] = array('There are no barcodes in this EAD document', '', '');
+  }
+
+  $header = array('Related objects', 'OPERATIONS');
+  $EAD_header = array('PID', 'EAD referenced objects', 'OPERATIONS');
+  $output['upitt_islandora_findingaids_relationships'] = array(
+    '#type' => 'item',
+    '#title' => 'Related objects',
+    '#markup' => 
+/* ((count($rows) > 0) ?
+      theme('table', array('header' => $header, 'rows' => $rows)) : '') .  */
+      ((count($EAD_rows) > 0) ? 
+      theme('table', array('header' => $EAD_header, 'rows' => $EAD_rows)) : '')
+  );  
+}
+
+/** 
+ * to generate the output for the manage page for objects
+ */
+function manage_object_findingaid(AbstractObject &$object, &$output) {
+  $obj_memberships = $object->relationships->get(NULL, 'isMemberOf');
+  $rows = array();
+  foreach ($obj_memberships as $obj_membership) {
+    // only add the related object if it is a finding aid object
+    if (_is_findingaid($obj_membership['object']['value'])) {
+      if (isset($obj_membership['object']['value'])) {
+        $findingaid_link = l($obj_membership['object']['value'], "islandora/object/{$obj_membership['object']['value']}");
+        $rows[] = array($findingaid_link,
+          l(t('Remove'), "islandora/object/{$object->id}/manage/object/findingaidrelationship/" . urlencode($obj_membership['predicate']['namespace']) . "/" . urlencode($obj_membership['object']['value']) . "/remove"),);
+      }
+    }
+  }
+  $header = array('Finding Aid', 'OPERATIONS');
+  $attributes = array();
+  // Add isMemberOf to this object.
+  $add_to_collection_link = array(
+    'element' => array(
+      '#link' => array(
+        'href' => "islandora/object/{$object->id}/manage/object/findingaidrelationship/add",
+        'title' => 'Add isMemberOf a Finding Aid object for this object',
+      ),
+    ),
+  );
+
+  $output['upitt_islandora_findingaids_relationships'] = array(
+    '#type' => 'item',
+    '#title' => 'Related Finding Aid',
+    '#markup' => '<ul class="action-links">' .
+    theme_menu_local_action($add_to_collection_link) .
+    '</ul>' .
+    ((count($rows) > 0) ?
+      theme('table', array('header' => $header, 'rows' => $rows)) : ''),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function upitt_islandora_findingaids_relationships_permission() {
+  return array(
+    UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE => array(
+      'title' => t('Manage Finding Aids relationships'),
+      'description' => t('Manage isMemberOf Finding Aids relationships for objects in the repository.'),
+    ),
+  );
+}
+
+/**
+ * Admin autocomplete callback which returns all possible Finding Aids objects via a Solr query.
+ *
+ * @param string $string
+ *   String filled out in the autocomplete textfield.
+ *
+ * @return json
+ *   A json array containing the finding aids values that contain the given string.
+ */
+function _islandora_findingaids_autocomplete($string = '') {
+  if ($string) {
+    $solr_query = format_string('!field:!value AND RELS_EXT_hasModel_uri_ms:info\:fedora\/islandora\:findingAidCModel', array(
+                  '!field' => 'fgs_label_s',
+                  '!value' => '*' . $string . '*'
+        ));
+  }
+  else {
+    $solr_query = 'RELS_EXT_hasModel_uri_ms:info\:fedora\/islandora\:findingAidCModel';
+  }
+  $query_processor = new IslandoraSolrQueryProcessor();
+
+  $query_processor->solrQuery = $solr_query;
+  $query_processor->solrStart = 0;
+  $query_processor->solrLimit = 9999;
+  $query_processor->solrParams = array(
+    'fl' => "PID,fgs_label_s",
+    'fq' => '',
+  );
+  $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
+  $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');
+  $solr->setCreateDocuments(FALSE);
+  $result = array();
+  try {
+    $results = $solr->search($query_processor->solrQuery, $query_processor->solrStart, $query_processor->solrLimit, $query_processor->solrParams, 'GET');
+    $tmp = json_decode($results->getRawResponse(), TRUE);
+    $results = array();
+    foreach ($tmp['response']['docs'] as $trip) {
+      $term = $trip['fgs_label_s'];
+      if (stripos($term, $string) !== FALSE) {
+        // Search case insensitive, but keep the case on replace.
+        $term_str = preg_replace("/$string/i", "<strong>\$0</strong>", $term);
+
+        // Add strong elements to highlight the found string.
+        $result[$trip['PID']] = $term_str;
+      }
+    }
+
+    // Sort alphabetically.
+    ksort($result);
+
+    drupal_json_output($result);
+    exit();
+  }
+  catch (Exception $e) {
+    return array();
+  }
+}
+
+/**
+ * Helper function to determine whether or not an object in the system is a Finding Aid object.
+ */
+function _is_findingaid($pid) {
+  $islandora_object = islandora_object_load($pid);
+  $retval = FALSE;
+  if ($islandora_object) {
+    $retval = (!(array_search('islandora:findingAidCModel', $islandora_object->models) === FALSE));
+  }
+  return $retval;
+}
+
+function findingaid_objects($pid) {
+  $solr_query = format_string('isMemberOf:!value', array(
+                '!value' => Apache_Solr_Service::escape('info:fedora/' . $pid)
+      ));
+  $options = array('wt' => 'json',
+                   'fl' => 'PID,fgs_label_s');
+  $solr_docs = islandora_solr($solr_query, $options);
+  $result = array();
+  if (is_array($solr_docs) && count($solr_docs) > 0) {
+    foreach ($solr_docs as $solr_doc_obj) {
+      $term = $solr_doc_obj['fgs_label_s'];
+      if (stripos($term, $string) !== FALSE) {
+        // Search case insensitive, but keep the case on replace.
+        $term_str = preg_replace("/$string/i", "<strong>\$0</strong>", $term);
+
+        // Add strong elements to highlight the found string.
+        $result[$solr_doc_obj['PID']] = $term_str;
+      }
+    }
+  }
+  // Sort alphabetically.
+  ksort($result);
+  return $result;
+}
+
+function findingaid_EAD_objects($object, $test_objects = FALSE) {
+  // perform a transform on the EAD datastream to get the barcodes
+  $EAD = isset($object['EAD']) ? $object['EAD'] : '';
+  $EAD_content = ($EAD) ? $EAD->content : NULL;
+
+  // use a DOM and the xpath = "//ead:dao/@ns2:href"
+  $input = new DOMDocument();
+  $input->loadXML($EAD_content);
+
+  $xpath = new DOMXPath($input);
+  $xpath_str = '//*[local-name()="dao"]/@ns2:href';
+  $barcodes = $xpath->evaluate($xpath_str);
+
+  $barcodes_arr = array();
+  foreach ($barcodes as $barcode) {
+    $pid = 'pitt:' . $barcode->nodeValue;
+    if ($test_objects) {
+      $object = islandora_object_load($pid);
+      $add_this = is_object($object);
+    }
+    else {
+      $add_this = true;
+    }
+    if ($add_this) {
+      $barcodes_arr[] = $pid;
+    }
+  }
+error_log(print_r($barcodes_arr, true));
+  return $barcodes_arr;
+}
