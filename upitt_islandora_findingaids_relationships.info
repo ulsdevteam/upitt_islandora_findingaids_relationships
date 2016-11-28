@@ -6,4 +6,4 @@ core = 7.x
 dependencies[] = islandora
 dependencies[] = islandora_basic_collection
 dependencies[] = islandora_manuscript
-configure = admin/islandora/tools/upitt_islandora_findingaids_relationships
+configure = admin/islandora/tools/findingaidrelationship
