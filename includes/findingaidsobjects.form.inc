@@ -132,7 +132,7 @@ function _do_add_all_findingaids_relationships($findingaid_pid) {
       $fedora_pid = 'info:fedora/' . $findingaid_pid;
       foreach ($rels as $rel) {
         $related |= ($rel == $fedora_pid);
-
+      }
       // if the related object is a book, make it into a manuscript object
       if (_is_book($child_rec_array['RELS_EXT_hasModel_uri_ms'])) {
         $child_object = islandora_object_load($object_pid);
@@ -181,7 +181,7 @@ function _do_add_relationship($findingaid_pid, $child) {
  */
 function _is_book($models) {
   $retval = FALSE;
-  if ($object) {
+  if (is_array($models)) {
     $retval = (!(array_search('islandora:bookCModel', $models) === FALSE));
   }
   return $retval;
