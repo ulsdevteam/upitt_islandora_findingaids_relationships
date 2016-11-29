@@ -89,21 +89,25 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
   $ead_referenced_objects = findingaid_EAD_objects($object);
   $referenced_objects = array_merge($ead_referenced_objects, $related_objects);
   $related_count = 0;
-  foreach ($referenced_objects as $child_object_pid) {
+  foreach ($referenced_objects as $child_object_pid => $child_rec_array) {
     $object_link = l($child_object_pid, "islandora/object/{$child_object_pid}");
-    $child_object = islandora_object_load($child_object_pid);
+    
+    // $child_object = islandora_object_load($child_object_pid);
     $related = FALSE;
     $exists = FALSE;
 
-    if (is_object($child_object)) {
-      $rels = $child_object->relationships->get(NULL, 'isMemberOf');
+    if (array_key_exists($child_object_pid, $related_objects) && array_key_exists('RELS_EXT_isMemberOf_uri_ms', $child_rec_array)) {
+      $rels = $child_rec_array['RELS_EXT_isMemberOf_uri_ms'];
+      //  $rels = $child_object->relationships->get(NULL, 'isMemberOf');
+      $fedora_pid = 'info:fedora/' . $object->id;
       foreach ($rels as $rel) {
-        $related |= ($rel['object']['value'] == $object->id);
+        $related |= ($rel == $fedora_pid);
         $obj_rel = $rel;
       }
       $exists = TRUE;
     }
-    $object_link = ($exists) ? l($child_object->label, "islandora/object/{$child_object_pid}") : $child_object_pid;
+    $object_label = (array_key_exists('fgs_label_s', $child_rec_array)) ? $child_rec_array['fgs_label_s'] : 'unknown label';
+    $object_link = ($exists) ? l($object_label, "islandora/object/{$child_object_pid}") : $child_object_pid;
       
     // if the object is related, display a remove link -- else display the add link
     $operation_links = array();
@@ -121,9 +125,8 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
     if ($exists) {
       $operation_links[] = l(t('Manage'), "islandora/object/{$child_object_pid}/manage", array('attributes' => array('target'=>'_blank')));
     }
-error_log('child pid = ' . $child_object_pid . 'ead references = '  .print_r($ead_referenced_objects, true));
     // if the PID is not found in the EAD, add this to indicate it is only manually related.
-    if (array_search($child_object_pid, $ead_referenced_objects) === FALSE) {
+    if (!array_key_exists($child_object_pid, $ead_referenced_objects)) {
       $child_object_pid .= " (not referenced in EAD)";
     }
     $EAD_rows[] = array($object_link, $child_object_pid, implode(" | ", $operation_links));
@@ -305,7 +308,7 @@ function findingaid_objects($pid) {
   $query_processor->solrStart = 0;
   $query_processor->solrLimit = 9999;
   $query_processor->solrParams = array(
-    'fl' => "PID",
+    'fl' => "PID,fgs_label_s,RELS_EXT_isMemberOf_uri_ms,RELS_EXT_hasModel_uri_ms",
     'fq' => variable_get('islandora_solr_base_filter', ''),
   );
   $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
@@ -317,7 +320,7 @@ function findingaid_objects($pid) {
     $tmp = json_decode($results->getRawResponse(), TRUE);
     $results = array();
     foreach ($tmp['response']['docs'] as $trip) {
-      $result[$trip['PID']] = $trip['PID'];
+      $result[$trip['PID']] = $trip;
     }
 
     // Sort alphabetically.
@@ -360,7 +363,7 @@ function findingaid_EAD_objects($object, $test_objects = FALSE) {
       $add_this = true;
     }
     if ($add_this) {
-      $barcodes_arr[] = $pid;
+      $barcodes_arr[$pid] = array('PID' => $pid);
     }
   }
   return $barcodes_arr;

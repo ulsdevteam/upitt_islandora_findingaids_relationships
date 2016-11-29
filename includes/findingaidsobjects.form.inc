@@ -121,37 +121,41 @@ function _do_add_all_findingaids_relationships($findingaid_pid) {
   $object = islandora_object_load($findingaid_pid);
   $referenced_objects = findingaid_EAD_objects($object);
   $added_ids = $skipped_ids = array();
-  foreach ($referenced_objects as $object_pid) {
+  foreach ($referenced_objects as $object_pid => $child_rec_array) {
     $object_link = l($object_pid, "islandora/object/{$object_pid}");
-    $child_object = islandora_object_load($object_pid);
-      
+
     $related = FALSE;
     $exists = FALSE;
-    if (is_object($child_object)) {
+
+    if (array_key_exists($object_pid, $related_objects) && array_key_exists('RELS_EXT_isMemberOf_uri_ms', $child_rec_array)) {
+      $rels = $child_rec_array['RELS_EXT_isMemberOf_uri_ms'];
+      $fedora_pid = 'info:fedora/' . $findingaid_pid;
+      foreach ($rels as $rel) {
+        $related |= ($rel == $fedora_pid);
+
       // if the related object is a book, make it into a manuscript object
-      if (_is_book($child_object)) {
-        $child_object->models = _manuscript_model_not_book($child_object->models);
+      if (_is_book($child_rec_array['RELS_EXT_hasModel_uri_ms'])) {
+        $child_object = islandora_object_load($object_pid);
+        if (is_object($child_object)) {
+          $child_object->models = _manuscript_model_not_book($child_rec_array['RELS_EXT_hasModel_uri_ms']);
+        }
       }
 
-      $rels = $child_object->relationships->get(NULL, 'isMemberOf');
-      foreach ($rels as $rel) {
-        $related |= ($rel['object']['value'] == $object->id);
-      }
       if (!$related) {
-        if (_do_add_relationship($findingaid_pid, $child_object)) {
-          $added_ids[] = $child_object->id;
+        if (_do_add_relationship($findingaid_pid, $object_pid)) {
+          $added_ids[] = $object_pid;
         }
       }
       else {
-        $skipped_ids[] = $child_object->id;
+        $skipped_ids[] = $object_pid;
       }
     }
   }
   if (count($added_ids) > 0) {
-    drupal_set_message(t('The "isMemberOf" relationship has been added between "@finding_aid" and "@object".', array('@finding_aid' => $object->id, '@objects' => implode(", ", $added_ids))));
+    drupal_set_message(t('The "isMemberOf" relationship has been added between "@finding_aid" and "@object".', array('@finding_aid' => $findingaid_pid, '@objects' => implode(", ", $added_ids))));
   }
   if (count($skipped_ids) > 0) {
-    drupal_set_message(t('Adding a "isMemberOf" relationship to "@finding_aid" was skipped because it already existed.  Objects: @objects', array('@finding_aid' => $object->id, '@objects' => implode(", ", $skipped_ids))));
+    drupal_set_message(t('Adding a "isMemberOf" relationship to "@finding_aid" was skipped because it already existed.  Objects: @objects', array('@finding_aid' => $findingaid_pid, '@objects' => implode(", ", $skipped_ids))));
   }
 }
 
@@ -161,20 +165,24 @@ function _do_add_all_findingaids_relationships($findingaid_pid) {
  * @param string $findingaid_pid
  *   The PID value for the finding aid object.
  *
- * @param object $child_object
+ * @param object OR string $child
+ *   When passed a string, need to load the object, else uses the object that is passed.
  *
  */
-function _do_add_relationship($findingaid_pid, $child_object) {
-  $child_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $findingaid_pid);
+function _do_add_relationship($findingaid_pid, $child) {
+  $child_object = (is_object($child)) ? $child : islandora_object_load($child_object_pid);
+  if (is_object($child_object)) {
+    $child_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $findingaid_pid);
+  }
 }
 
 /**
  * Helper function to determine whether or not the object is a bookCModel
  */
-function _is_book($object) {
+function _is_book($models) {
   $retval = FALSE;
   if ($object) {
-    $retval = (!(array_search('islandora:bookCModel', $object->models) === FALSE));
+    $retval = (!(array_search('islandora:bookCModel', $models) === FALSE));
   }
   return $retval;
 }
