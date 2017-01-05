@@ -92,9 +92,9 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
   foreach ($referenced_objects as $child_object_pid => $child_rec_array) {
     $object_link = l($child_object_pid, "islandora/object/{$child_object_pid}");
     
-    // $child_object = islandora_object_load($child_object_pid);
+    $child_object = islandora_object_load($child_object_pid);
     $related = FALSE;
-    $exists = FALSE;
+    $exists = is_object($child_object);
 
     if (array_key_exists($child_object_pid, $related_objects) && array_key_exists('RELS_EXT_isMemberOf_uri_ms', $child_rec_array)) {
       $rels = $child_rec_array['RELS_EXT_isMemberOf_uri_ms'];
@@ -104,9 +104,8 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
         $related |= ($rel == $fedora_pid);
         $obj_rel = $rel;
       }
-      $exists = TRUE;
     }
-    $object_label = (array_key_exists('fgs_label_s', $child_rec_array)) ? $child_rec_array['fgs_label_s'] : 'unknown label';
+    $object_label = (array_key_exists('fgs_label_s', $child_rec_array)) ? $child_rec_array['fgs_label_s'] : (($exists) ? $child_object->label : 'unknown label');
     $object_link = ($exists) ? l($object_label, "islandora/object/{$child_object_pid}") : $child_object_pid;
       
     // if the object is related, display a remove link -- else display the add link

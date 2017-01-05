@@ -112,7 +112,7 @@ function upitt_islandora_findingaids_relationships_remove_submit($form, &$form_s
 
 /**
  * Function that will attempt to add the "isMemberOf" relationship for all objects associated to a finding aid EAD.  This is called
- * from the "add" form (just below) -- and allows a call from a script to this function.
+ * from the "add" form (just below) -- and allows a call from a script to this function.  This will also convert the related book objects to manuscripts.
  *
  * @param string $findingaid_pid
  *   The PID value for the finding aid object.
@@ -121,13 +121,14 @@ function _do_add_all_findingaids_relationships($findingaid_pid) {
   $object = islandora_object_load($findingaid_pid);
   $referenced_objects = findingaid_EAD_objects($object);
   $added_ids = $skipped_ids = array();
+  $related_objects = findingaid_objects($object->id);
+
   foreach ($referenced_objects as $object_pid => $child_rec_array) {
     $object_link = l($object_pid, "islandora/object/{$object_pid}");
 
     $related = FALSE;
     $exists = FALSE;
-
-    if (array_key_exists($object_pid, $related_objects) && array_key_exists('RELS_EXT_isMemberOf_uri_ms', $child_rec_array)) {
+    if (!array_key_exists($object_pid, $related_objects)) {
       $rels = $child_rec_array['RELS_EXT_isMemberOf_uri_ms'];
       $fedora_pid = 'info:fedora/' . $findingaid_pid;
       foreach ($rels as $rel) {
@@ -170,7 +171,7 @@ function _do_add_all_findingaids_relationships($findingaid_pid) {
  *
  */
 function _do_add_relationship($findingaid_pid, $child) {
-  $child_object = (is_object($child)) ? $child : islandora_object_load($child_object_pid);
+  $child_object = (is_object($child)) ? $child : islandora_object_load($child);
   if (is_object($child_object)) {
     $child_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $findingaid_pid);
   }
