@@ -347,6 +347,7 @@ function findingaid_EAD_objects($object, $test_objects = FALSE) {
   $input->loadXML($EAD_content);
 
   $xpath = new DOMXPath($input);
+  $xpath->registerNamespace('ns2', 'http://www.w3.org/1999/xlink');
   $xpath_str = '//*[local-name()="dao"]/@ns2:href';
   $barcodes = $xpath->evaluate($xpath_str);
 
