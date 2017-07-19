@@ -8,6 +8,9 @@ Relationships between finding aids and any manuscriptCModel/bookCModel/sp_basic_
 
 It may also be desirable to display the relationship to the finding aids at an object level.  Once the isMemberOf relationship exists on the objects, it is a simple matter of displaying the RELS_EXT_isMemberOf_uri_ms values in the metadata.
 
+TODO: 
+Extend this module to support a drush batch ingest method.  The finding aid would have "children" in this context, so handle the "IslandoraBatchObject::getChildren()" method.  See: https://github.com/Islandora/islandora_batch/wiki/How-To-Extend.
+
 
 If the "add all objects to finding aid" functionality needs to be used in an other module's script code, simply include the findingaids.form.inc - and call like this: 
 
