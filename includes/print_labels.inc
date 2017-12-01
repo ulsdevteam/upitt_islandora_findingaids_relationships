@@ -41,7 +41,24 @@ function upitt_islandora_findingaids_relationships_make_print_labels($ead_conten
         'xsl' => drupal_get_path('module', 'upitt_islandora_findingaids_relationships') . '/transforms/recurse.xsl',
         'input' => $ead_content,
     ));
-    return $containers;
+    // The containers should be tab delimited -- should convert to CSV
+    $csv_list = array();
+    $lines = explode("\n", $containers);
+    foreach ($lines as $line) {
+      $csv_list[] = explode("\t", $line);
+    }
+
+    $temp_filename = drupal_realpath(drupal_tempnam("temporary://", "print_labels_csv"));
+    $fp = fopen($temp_filename, 'w');
+    foreach ($csv_list as $fields) {
+      fputcsv($fp, $fields);
+    }
+    @fclose($fp);
+
+    $csv_file = file_get_contents($temp_filename);
+    unlink($temp_filename);
+    
+    return $csv_file;
   }
 }
 

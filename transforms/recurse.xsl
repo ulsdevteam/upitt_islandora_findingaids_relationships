@@ -11,7 +11,7 @@
     <xsl:template name="container" match="//ead:container | //ead:c">
         <xsl:param name="containers" select="//ead:container" />
         <xsl:if test="current()[@type='file'] | current()[@type='folder'] | current()[@type='Folder'] | current()[@type='Folders'] | current()[@type='Item'] | current()[@level='item'] | current()[@type='oversize'] | current()[@type='Oversize'] | current()[@type='volume'] | current()[@type='Volume'] | current()[@type='Volumes']">
-                <xsl:value-of select="normalize-space(//ead:eadid)" />
+                <xsl:value-of select="normalize-space(//ead:titleproper/ead:num)" />
                 <xsl:text>&#09;</xsl:text>
                 <xsl:value-of select="normalize-space(//ead:titleproper)" />
                 <xsl:text>&#09;</xsl:text>
