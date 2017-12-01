@@ -53,6 +53,15 @@ function upitt_islandora_findingaids_relationships_menu() {
       'access arguments' => array(UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE),
       'type' => MENU_CALLBACK,
     ),
+    // This is to handle the download print labels spreadsheet
+    'islandora/object/%islandora_object/manage/print_findingaid_labels' => array(
+      'title' => 'Add isMemberOf a Finding Aid object for this object',
+      'page callback' => 'upitt_islandora_findingaids_relationships_print_labels',
+      'page arguments' => array(2),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/print_labels.inc',
+      'access arguments' => array(UPITT_ISLANDORA_FINDINGAIDS_RELATIONSHIPS_MANAGE),
+    ),
   );
 
   return $items;
@@ -144,9 +153,13 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
 
   $header = array('Related objects', 'OPERATIONS');
   $EAD_header = array('Title', 'PID', 'OPERATIONS');
+
+  $print_labels_link = '<b>' . l('Download Print Labels', "islandora/object/{$object->id}/manage/print_findingaid_labels") . '</b>';
+
   $output['upitt_islandora_findingaids_relationships'] = array(
     '#type' => 'item',
     '#title' => 'Related objects',
+    '#prefix' => $print_labels_link,
     '#markup' => $add_all . ((count($EAD_rows) > 0) ? 
       theme('table', array('header' => $EAD_header, 'rows' => $EAD_rows)) : '')
   );  
