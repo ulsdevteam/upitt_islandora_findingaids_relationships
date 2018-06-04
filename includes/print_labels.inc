@@ -13,6 +13,8 @@
 function upitt_islandora_findingaids_relationships_print_labels(AbstractObject $object) {
   // Inspect the current $object to be sure it is a finding aid that has
   // an EAD datastream.
+  set_time_limit(0);
+
   if (is_object($object) && !(array_search('islandora:findingAidCModel', $object->models) === FALSE) && isset($object['EAD'])) {
     $csv_file = upitt_islandora_findingaids_relationships_make_print_labels($object['EAD']->content);
     if ($csv_file) {
