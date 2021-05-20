@@ -100,7 +100,7 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
   $related_count = 0;
   foreach ($referenced_objects as $child_object_pid => $child_rec_array) {
     $object_link = l($child_object_pid, "islandora/object/{$child_object_pid}");
-    
+
     $child_object = islandora_object_load($child_object_pid);
     $related = FALSE;
     $exists = is_object($child_object);
@@ -116,7 +116,7 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
     }
     $object_label = (array_key_exists('fgs_label_s', $child_rec_array)) ? $child_rec_array['fgs_label_s'] : (($exists) ? $child_object->label : 'unknown label');
     $object_link = ($exists) ? l($object_label, "islandora/object/{$child_object_pid}") : $child_object_pid;
-      
+
     // if the object is related, display a remove link -- else display the add link
     $operation_links = array();
     if ($related) {
@@ -160,12 +160,12 @@ function manage_findingaid_objects(AbstractObject &$object, &$output) {
     '#type' => 'item',
     '#title' => 'Related objects',
     '#prefix' => $print_labels_link,
-    '#markup' => $add_all . ((count($EAD_rows) > 0) ? 
+    '#markup' => $add_all . ((count($EAD_rows) > 0) ?
       theme('table', array('header' => $EAD_header, 'rows' => $EAD_rows)) : '')
-  );  
+  );
 }
 
-/** 
+/**
  * to generate the output for the manage page for objects
  */
 function manage_object_findingaid(AbstractObject &$object, &$output) {
@@ -346,7 +346,7 @@ function findingaid_objects($pid) {
 }
 
 /**
- * Helper function that will inspect the EAD datastream of a given finding aid object.  The barcode values are returned after 
+ * Helper function that will inspect the EAD datastream of a given finding aid object.  The barcode values are returned after
  * prepending the islandora namespace prefix (upitt_islandora_findingaids_relationships_namespace_prefix - which is configured
  * here: admin/islandora/tools/findingaidrelationship.
  */
@@ -355,13 +355,13 @@ function findingaid_EAD_objects($object, $test_objects = FALSE) {
   $EAD = isset($object['EAD']) ? $object['EAD'] : '';
   $EAD_content = ($EAD) ? $EAD->content : NULL;
 
-  // use a DOM and the xpath = "//ead:dao/@ns2:href"
+  // use a DOM and the xpath = "//ead:dao/@xlink:href"
   $input = new DOMDocument();
   $input->loadXML($EAD_content);
 
   $xpath = new DOMXPath($input);
-  $xpath->registerNamespace('ns2', 'http://www.w3.org/1999/xlink');
-  $xpath_str = '//*[local-name()="dao"]/@ns2:href';
+  $xpath->registerNamespace('xlink', 'http://www.w3.org/1999/xlink');
+  $xpath_str = '//*[local-name()="dao"]/@xlink:href';
   $barcodes = $xpath->evaluate($xpath_str);
 
   $barcodes_arr = array();
