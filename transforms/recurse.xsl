@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:ead="urn:isbn:1-931666-22-9"
-    xmlns:mods="http://www.loc.gov/mods/v3" xmlns:ns2="http://www.w3.org/1999/xlink"
-    exclude-result-prefixes="ead mods ns2 xsl" version="1.0">
+    xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink"
+    exclude-result-prefixes="ead mods xlink xsl" version="1.0">
     <xsl:output method="text" indent="no" encoding="utf-8"/>
 <xsl:variable name="decrement">1</xsl:variable>
 <xsl:template match="/">
