@@ -355,13 +355,13 @@ function findingaid_EAD_objects($object, $test_objects = FALSE) {
   $EAD = isset($object['EAD']) ? $object['EAD'] : '';
   $EAD_content = ($EAD) ? $EAD->content : NULL;
 
-  // use a DOM and the xpath = "//ead:dao/@ns2:href"
+  // use a DOM and the xpath = "//ead:dao/@xlink:href"
   $input = new DOMDocument();
   $input->loadXML($EAD_content);
 
   $xpath = new DOMXPath($input);
-  $xpath->registerNamespace('ns2', 'http://www.w3.org/1999/xlink');
-  $xpath_str = '//*[local-name()="dao"]/@ns2:href';
+  $xpath->registerNamespace('xlink', 'http://www.w3.org/1999/xlink');
+  $xpath_str = '//*[local-name()="dao"]/@xlink:href';
   $barcodes = $xpath->evaluate($xpath_str);
 
   $barcodes_arr = array();
