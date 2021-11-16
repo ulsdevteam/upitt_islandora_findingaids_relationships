@@ -135,7 +135,7 @@ function _do_add_all_findingaids_relationships($findingaid_pid) {
         $related |= ($rel == $fedora_pid);
       }
       // if the related object is a book, make it into a manuscript object
-      if (_is_book($child_rec_array['RELS_EXT_hasModel_uri_ms'])) {
+      if (isset($child_rec_array['RELS_EXT_hasModel_uri_ms']) && _is_book($child_rec_array['RELS_EXT_hasModel_uri_ms'])) {
         $child_object = islandora_object_load($object_pid);
         if (is_object($child_object)) {
           $child_object->models = _manuscript_model_not_book($child_rec_array['RELS_EXT_hasModel_uri_ms']);
